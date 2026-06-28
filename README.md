@@ -1,6 +1,6 @@
 # Indian Trading Skills for Claude
 
-> Turn Claude into your Indian market research analyst. 10 specialized skills covering NSE/BSE equities, F&O derivatives, institutional flows, market breadth, live news tracking, and weekly trade planning — all built for Indian markets.
+> Turn Claude into your Indian market research analyst and trade-planning assistant. 19 specialized skills covering NSE/BSE equities, F&O derivatives, institutional flows, market breadth, live news tracking, weekly trade planning, position sizing, stops, risk/reward, RSI divergence, Fibonacci levels, and multi-timeframe analysis — all built for Indian markets.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
@@ -8,7 +8,7 @@
 
 ## What This Is
 
-A collection of [Claude Skills](https://docs.anthropic.com/en/docs/claude-code/skills) that give Claude deep knowledge of Indian equity markets. Each skill is a self-contained module with methodology references, scoring frameworks, and Python scripts — purpose-built for NSE/BSE.
+A collection of [Claude Skills](https://docs.anthropic.com/en/docs/claude-code/skills) that give Claude deep knowledge of Indian equity markets. Each skill is a self-contained module with methodology references, scoring frameworks, Python scripts where useful, or lightweight prompt frameworks for trade planning and risk management — purpose-built for NSE/BSE.
 
 **No API keys required** for most skills. Uses free data sources (yfinance, niftystocks) and optionally integrates with [Groww MCP](https://groww.in) or [Zerodha Kite MCP](https://github.com/zerodha/kite-mcp-server) for live market data and trading.
 
@@ -54,6 +54,11 @@ Just talk to Claude naturally:
 "What are FII/DII flows telling us this month?"
 "Give me today's market news briefing"
 "Any news about Tata Motors?"
+"Use nse-trading-toolkit to plan a RELIANCE swing trade"
+"Position size for HDFCBANK with Rs.5 lakh account"
+"Where should I set stop-loss for INFY at Rs.1,850?"
+"Is this trade worth it? Entry 1800, stop 1700, target 2100"
+"Check RSI divergence on TATAMOTORS daily chart"
 ```
 
 ## Skills
@@ -239,6 +244,87 @@ Complete weekly F&O trading workflow — from macro thesis to position managemen
 
 **Built-in risk rules:** Max 40% capital per trade, mandatory GTT stop-loss, weekend exit rule for weekly expiry, no averaging down, orphaned GTT cleanup after every exit.
 
+### 11. NSE Trading Toolkit
+Master orchestrator for short-term NSE/BSE equity trade planning. Coordinates technical setup, multi-timeframe context, RSI divergence, Fibonacci levels, position sizing, stops, trailing stops, and risk/reward into one action plan.
+
+| | |
+|---|---|
+| **Trigger** | "Analyze RELIANCE", "Should I buy SBIN?", "Plan this swing trade" |
+| **Output** | Quick take, scenarios, action plan, position size, stop, targets, R:R |
+| **Data** | Manual prices, Groww MCP, or yfinance |
+
+### 12. Technical Analysis
+Data-driven technical analysis for NSE/BSE equities using trend, support/resistance, volume, indicator dashboards, and probability-weighted scenarios. This complements `technical-analyst`, which is focused on chart-image analysis.
+
+| | |
+|---|---|
+| **Trigger** | "What's the trend on TCS?", "support resistance for INFY", "indicators for HDFCBANK" |
+| **Output** | Trend read, key levels, indicator bias, bullish/bearish/sideways scenarios |
+| **Data** | Manual prices, Groww MCP, or yfinance |
+
+### 13. Position Sizing
+Calculates share quantity and capital allocation from account size, stop distance, volatility, leverage, and portfolio concentration rules.
+
+| | |
+|---|---|
+| **Trigger** | "How many shares should I buy?", "position size for RELIANCE", "risk per trade" |
+| **Output** | Shares, capital required, risk amount, allocation percentage |
+| **Data** | Account size, entry, stop, optional ATR/portfolio data |
+
+### 14. Stop-Loss Strategies
+Initial stop-loss placement using structure, ATR, support/resistance, moving averages, buffers, and hard risk limits.
+
+| | |
+|---|---|
+| **Trigger** | "Where should I set stop-loss?", "protect this INFY trade" |
+| **Output** | Stop method, stop price, invalidation logic, risk validation |
+| **Data** | Entry price, recent structure, ATR, key levels |
+
+### 15. Trailing Stops
+Profit-protection framework using breakeven moves, ATR trail, structure trail, moving-average trail, chandelier exit, and a hybrid staged approach.
+
+| | |
+|---|---|
+| **Trigger** | "How should I trail my stop?", "lock in profits", "move stop to breakeven?" |
+| **Output** | Current trailing method, next stop level, adjustment rules |
+| **Data** | Entry, current price, original stop, ATR, recent swing levels |
+
+### 16. Risk-Reward Ratio
+Evaluates whether a trade is worth taking based on entry, stop, target, win-rate assumptions, multi-target exits, and expected value.
+
+| | |
+|---|---|
+| **Trigger** | "Is this trade worth it?", "risk reward ratio", "expected value" |
+| **Output** | R:R, rupee risk/reward, verdict, minimum required win rate |
+| **Data** | Entry, stop, target, position size |
+
+### 17. Multi-Timeframe Analysis
+Uses the 3-screen method: weekly bias, daily setup, and hourly/4H entry timing, with a confluence score.
+
+| | |
+|---|---|
+| **Trigger** | "Weekly vs daily trend?", "multi-timeframe check", "higher timeframe bias" |
+| **Output** | Weekly/daily/hourly verdicts, confluence score, trade filter |
+| **Data** | Multi-timeframe candles or manually supplied levels |
+
+### 18. RSI Divergence
+Identifies regular and hidden RSI divergences, grades signal strength, and defines confirmation, entry, stop, and target logic.
+
+| | |
+|---|---|
+| **Trigger** | "RSI divergence on TATAMOTORS?", "hidden divergence", "momentum divergence" |
+| **Output** | Divergence type, strength, confirmation trigger, invalidation |
+| **Data** | Price swings and RSI values, or candles/indicators via data tools |
+
+### 19. Fibonacci Trading
+Calculates retracement entry zones, extension targets, and confluence areas using swing high/low anchors.
+
+| | |
+|---|---|
+| **Trigger** | "Fib levels for NIFTY", "Fibonacci targets", "where to enter on pullback" |
+| **Output** | Retracement levels, extension targets, confluence zones |
+| **Data** | Swing high, swing low, current price |
+
 ## Project Structure
 
 ```
@@ -287,13 +373,31 @@ indian-trading-skills/
     │   ├── references/{news_source_guide, sector_mapping, sentiment_patterns}.md
     │   ├── scripts/news_fetcher.py
     │   └── assets/daily_briefing_template.md
-    └── weekly-fno-trade-planner/
+    ├── weekly-fno-trade-planner/
+    │   └── SKILL.md
+    ├── nse-trading-toolkit/
+    │   └── SKILL.md
+    ├── technical-analysis/
+    │   └── SKILL.md
+    ├── position-sizing/
+    │   └── SKILL.md
+    ├── stop-loss-strategies/
+    │   └── SKILL.md
+    ├── trailing-stops/
+    │   └── SKILL.md
+    ├── risk-reward-ratio/
+    │   └── SKILL.md
+    ├── multi-timeframe-analysis/
+    │   └── SKILL.md
+    ├── rsi-divergence/
+    │   └── SKILL.md
+    └── fibonacci-trading/
         └── SKILL.md
 ```
 
 ## Broker Integration
 
-All skills support **dual broker MCP** — use Groww, Zerodha, or both. Each skill auto-detects which broker is connected and uses the appropriate tools.
+Broker-aware skills support **dual broker MCP** — use Groww, Zerodha, or both. Skills that need live market, portfolio, margin, or order data auto-detect which broker is connected and use the appropriate tools. The lightweight trade-planning skills also work with manually supplied prices and can use Groww MCP or yfinance where available.
 
 ### Zerodha Kite MCP Setup
 
@@ -328,10 +432,10 @@ Groww MCP is available as a connector in Claude. Connect it from the MCP connect
 
 | Source | Skills | API Key | Cost |
 |--------|--------|---------|------|
-| [yfinance](https://github.com/ranaroussi/yfinance) | VCP Screener, Market Breadth, News Tracker | None | Free |
+| [yfinance](https://github.com/ranaroussi/yfinance) | VCP Screener, Market Breadth, News Tracker, trade-planning skills | None | Free |
 | [niftystocks](https://github.com/swapniljariwala/niftystocks) | VCP Screener | None | Free |
-| [Groww MCP](https://groww.in) | All skills (market data + fundamentals) | Via Claude | Free |
-| [Zerodha Kite MCP](https://github.com/zerodha/kite-mcp-server) | All skills (market data + trading) | Via Claude | Free |
+| [Groww MCP](https://groww.in) | Broker-aware skills plus trade-planning data | Via Claude | Free |
+| [Zerodha Kite MCP](https://github.com/zerodha/kite-mcp-server) | Broker-aware skills (market data + trading) | Via Claude | Free |
 | [feedparser](https://github.com/kurtmckee/feedparser) | News Tracker (RSS feeds) | None | Free |
 | Web Search | Flow Tracker, Scenario Analyzer, News Tracker | Via Claude | Free |
 
