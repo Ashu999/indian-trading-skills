@@ -3,6 +3,8 @@ Minervini's 7-Point Trend Template Calculator for Stage 2 identification.
 Adapted for Indian markets (NSE/BSE).
 """
 
+from typing import cast
+
 import pandas as pd
 
 
@@ -29,15 +31,18 @@ def calculate_trend_template(df: pd.DataFrame) -> dict:
             "details": {"error": "Insufficient data (need 200+ days)"},
         }
 
-    close = df["Close"]
+    close = cast(pd.Series, df["Close"])
     current_price = float(close.iloc[-1])
 
-    ma_50 = float(close.rolling(50).mean().iloc[-1])
-    ma_150 = float(close.rolling(150).mean().iloc[-1])
-    ma_200 = float(close.rolling(200).mean().iloc[-1])
+    ma_50_series = cast(pd.Series, close.rolling(50).mean())
+    ma_150_series = cast(pd.Series, close.rolling(150).mean())
+    ma_200_series = cast(pd.Series, close.rolling(200).mean())
+
+    ma_50 = float(ma_50_series.iloc[-1])
+    ma_150 = float(ma_150_series.iloc[-1])
+    ma_200 = float(ma_200_series.iloc[-1])
 
     # Check if 200-day MA is trending up for at least 1 month (22 trading days)
-    ma_200_series = close.rolling(200).mean()
     ma_200_month_ago = float(ma_200_series.iloc[-22]) if len(ma_200_series) >= 22 else ma_200
     ma_200_trending_up = ma_200 > ma_200_month_ago
 

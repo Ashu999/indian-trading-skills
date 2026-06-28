@@ -16,10 +16,9 @@ Default risk-free rate: India 91-day T-bill rate (~6.5-7%)
 import argparse
 import math
 import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import List, Optional, Tuple
-
+from typing import Any, Optional, cast
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -153,14 +152,14 @@ class PLPoint:
 class StrategyAnalysis:
     """Complete analysis of an options strategy."""
     strategy_name: str
-    legs: List[OptionLeg]
+    legs: list[OptionLeg]
     underlying_price: float
     net_premium: float  # Positive = net debit, Negative = net credit
     max_profit: float
     max_loss: float
-    breakeven_points: List[float]
+    breakeven_points: list[float]
     risk_reward_ratio: float
-    pl_curve: List[PLPoint]
+    pl_curve: list[PLPoint]
     net_greeks: Optional[Greeks] = None
 
 
@@ -209,7 +208,7 @@ class OptionPricer:
         # Pre-calculate d1 and d2
         self._d1, self._d2 = self._calculate_d1_d2()
 
-    def _calculate_d1_d2(self) -> Tuple[float, float]:
+    def _calculate_d1_d2(self) -> tuple[float, float]:
         """Calculate the d1 and d2 parameters for Black-Scholes."""
         sqrt_T = math.sqrt(self.T)
         d1 = (
@@ -379,7 +378,7 @@ class OptionPricer:
         sigma = math.sqrt(2.0 * math.pi / time_to_expiry) * (market_price / spot)
         sigma = max(sigma, 0.01)  # Floor at 1%
 
-        for i in range(max_iterations):
+        for _i in range(max_iterations):
             pricer = OptionPricer(
                 spot, strike, time_to_expiry, sigma, risk_free_rate, dividend_yield
             )
@@ -508,12 +507,12 @@ def calculate_historical_volatility(
     fetch_days = int(days * 1.6) + 10
 
     try:
-        data = yf.download(
+        data = cast(Any, yf.download(
             yf_ticker,
             period=f"{fetch_days}d",
             progress=False,
             auto_adjust=True,
-        )
+        ))
 
         if data.empty or len(data) < 5:
             print(
@@ -564,10 +563,10 @@ def calculate_historical_volatility(
 # ---------------------------------------------------------------------------
 
 def simulate_pl(
-    strategy_legs: List[OptionLeg],
-    price_range: Tuple[float, float],
+    strategy_legs: list[OptionLeg],
+    price_range: tuple[float, float],
     num_points: int = 50,
-) -> List[PLPoint]:
+) -> list[PLPoint]:
     """
     Simulate profit/loss at expiry across a range of underlying prices.
 
@@ -598,10 +597,10 @@ def simulate_pl(
 
 
 def find_breakeven_points(
-    strategy_legs: List[OptionLeg],
-    price_range: Tuple[float, float],
+    strategy_legs: list[OptionLeg],
+    price_range: tuple[float, float],
     num_points: int = 1000,
-) -> List[float]:
+) -> list[float]:
     """
     Find breakeven points where P/L crosses zero.
 
@@ -629,9 +628,9 @@ def find_breakeven_points(
 
 def analyze_strategy(
     strategy_name: str,
-    legs: List[OptionLeg],
+    legs: list[OptionLeg],
     underlying_price: float,
-    price_range: Optional[Tuple[float, float]] = None,
+    price_range: Optional[tuple[float, float]] = None,
     num_points: int = 50,
     net_greeks: Optional[Greeks] = None,
 ) -> StrategyAnalysis:
@@ -703,7 +702,7 @@ def analyze_strategy(
 # ---------------------------------------------------------------------------
 
 def generate_ascii_pl_diagram(
-    pl_data: List[PLPoint],
+    pl_data: list[PLPoint],
     width: int = 60,
     height: int = 20,
     title: str = "P/L at Expiry",
@@ -806,7 +805,6 @@ def generate_ascii_pl_diagram(
 
     # Distribute labels across the x-axis
     x_label_line = " " * 11
-    positions_used = 0
     for i, pos in enumerate(x_label_positions):
         label = x_labels[i]
         actual_pos = 11 + pos
@@ -818,9 +816,9 @@ def generate_ascii_pl_diagram(
 
     # Legend
     lines.append("")
-    lines.append(f"  Legend: '+' = Profit | 'o' = Loss | '*' = Breakeven | '-' = Zero line")
-    lines.append(f"  X-axis: Underlying price at expiry")
-    lines.append(f"  Y-axis: Profit / Loss")
+    lines.append("  Legend: '+' = Profit | 'o' = Loss | '*' = Breakeven | '-' = Zero line")
+    lines.append("  X-axis: Underlying price at expiry")
+    lines.append("  Y-axis: Profit / Loss")
 
     return "\n".join(lines)
 
@@ -871,7 +869,7 @@ def generate_strategy_report(analysis: StrategyAnalysis) -> str:
         be_str = ", ".join(f"{be:.2f}" for be in analysis.breakeven_points)
         lines.append(f"  Breakeven(s)    : {be_str}")
     else:
-        lines.append(f"  Breakeven(s)    : None found in range")
+        lines.append("  Breakeven(s)    : None found in range")
 
     lines.append(f"  Risk-Reward     : 1:{analysis.risk_reward_ratio:.2f}")
     lines.append("")
@@ -927,7 +925,7 @@ def build_bull_call_spread(
     upper_premium: float,
     lots: int = 1,
     lot_size: int = 75,
-) -> List[OptionLeg]:
+) -> list[OptionLeg]:
     """Build a Bull Call Spread: Buy lower strike call, sell upper strike call."""
     return [
         OptionLeg(OptionType.CALL, PositionType.LONG, lower_strike, lower_premium, lots, lot_size),
@@ -942,7 +940,7 @@ def build_bear_put_spread(
     lower_premium: float,
     lots: int = 1,
     lot_size: int = 75,
-) -> List[OptionLeg]:
+) -> list[OptionLeg]:
     """Build a Bear Put Spread: Buy higher strike put, sell lower strike put."""
     return [
         OptionLeg(OptionType.PUT, PositionType.LONG, upper_strike, upper_premium, lots, lot_size),
@@ -957,7 +955,7 @@ def build_bull_put_spread(
     lower_premium: float,
     lots: int = 1,
     lot_size: int = 75,
-) -> List[OptionLeg]:
+) -> list[OptionLeg]:
     """Build a Bull Put Spread: Sell higher strike put, buy lower strike put."""
     return [
         OptionLeg(OptionType.PUT, PositionType.SHORT, upper_strike, upper_premium, lots, lot_size),
@@ -972,7 +970,7 @@ def build_bear_call_spread(
     upper_premium: float,
     lots: int = 1,
     lot_size: int = 75,
-) -> List[OptionLeg]:
+) -> list[OptionLeg]:
     """Build a Bear Call Spread: Sell lower strike call, buy upper strike call."""
     return [
         OptionLeg(OptionType.CALL, PositionType.SHORT, lower_strike, lower_premium, lots, lot_size),
@@ -986,7 +984,7 @@ def build_long_straddle(
     put_premium: float,
     lots: int = 1,
     lot_size: int = 75,
-) -> List[OptionLeg]:
+) -> list[OptionLeg]:
     """Build a Long Straddle: Buy ATM call and ATM put at same strike."""
     return [
         OptionLeg(OptionType.CALL, PositionType.LONG, strike, call_premium, lots, lot_size),
@@ -1000,7 +998,7 @@ def build_short_straddle(
     put_premium: float,
     lots: int = 1,
     lot_size: int = 75,
-) -> List[OptionLeg]:
+) -> list[OptionLeg]:
     """Build a Short Straddle: Sell ATM call and ATM put at same strike."""
     return [
         OptionLeg(OptionType.CALL, PositionType.SHORT, strike, call_premium, lots, lot_size),
@@ -1015,7 +1013,7 @@ def build_long_strangle(
     put_premium: float,
     lots: int = 1,
     lot_size: int = 75,
-) -> List[OptionLeg]:
+) -> list[OptionLeg]:
     """Build a Long Strangle: Buy OTM call and OTM put."""
     return [
         OptionLeg(OptionType.CALL, PositionType.LONG, call_strike, call_premium, lots, lot_size),
@@ -1030,7 +1028,7 @@ def build_short_strangle(
     put_premium: float,
     lots: int = 1,
     lot_size: int = 75,
-) -> List[OptionLeg]:
+) -> list[OptionLeg]:
     """Build a Short Strangle: Sell OTM call and OTM put."""
     return [
         OptionLeg(OptionType.CALL, PositionType.SHORT, call_strike, call_premium, lots, lot_size),
@@ -1049,7 +1047,7 @@ def build_iron_condor(
     call_buy_premium: float,
     lots: int = 1,
     lot_size: int = 75,
-) -> List[OptionLeg]:
+) -> list[OptionLeg]:
     """
     Build an Iron Condor:
     Buy OTM Put (lowest) + Sell Put (lower-mid) + Sell Call (upper-mid) + Buy OTM Call (highest).
@@ -1072,7 +1070,7 @@ def build_iron_butterfly(
     call_buy_premium: float,
     lots: int = 1,
     lot_size: int = 75,
-) -> List[OptionLeg]:
+) -> list[OptionLeg]:
     """
     Build an Iron Butterfly:
     Buy OTM Put + Sell ATM Put + Sell ATM Call + Buy OTM Call.
@@ -1223,7 +1221,7 @@ Examples:
         )
         price = pricer.price(opt_type)
         print(f"\n{'=' * 50}")
-        print(f"  Black-Scholes Option Price")
+        print("  Black-Scholes Option Price")
         print(f"{'=' * 50}")
         print(f"  Underlying  : {args.spot:.2f}")
         print(f"  Strike      : {args.strike:.2f}")
@@ -1231,7 +1229,7 @@ Examples:
         print(f"  Volatility  : {args.vol:.2%}")
         print(f"  Risk-Free   : {args.rate:.2%}")
         print(f"  Type        : {args.type}")
-        print(f"  ---------------------")
+        print("  ---------------------")
         print(f"  PRICE       : {price:.2f}")
         print(f"{'=' * 50}\n")
 
@@ -1247,7 +1245,7 @@ Examples:
         )
         result = pricer.full_result(opt_type)
         print(f"\n{'=' * 50}")
-        print(f"  Black-Scholes Greeks")
+        print("  Black-Scholes Greeks")
         print(f"{'=' * 50}")
         print(f"  Underlying  : {args.spot:.2f}")
         print(f"  Strike      : {args.strike:.2f}")
@@ -1255,7 +1253,7 @@ Examples:
         print(f"  Volatility  : {args.vol:.2%}")
         print(f"  Risk-Free   : {args.rate:.2%}")
         print(f"  Type        : {args.type}")
-        print(f"  ---------------------")
+        print("  ---------------------")
         print(f"  Price       : {result.price:.4f}")
         print(f"  Delta       : {result.greeks.delta:.6f}")
         print(f"  Gamma       : {result.greeks.gamma:.6f}")
@@ -1279,14 +1277,14 @@ Examples:
                 dividend_yield=args.div_yield,
             )
             print(f"\n{'=' * 50}")
-            print(f"  Implied Volatility")
+            print("  Implied Volatility")
             print(f"{'=' * 50}")
             print(f"  Underlying    : {args.spot:.2f}")
             print(f"  Strike        : {args.strike:.2f}")
             print(f"  Days to Exp   : {args.expiry_days:.0f}")
             print(f"  Market Price  : {args.market_price:.2f}")
             print(f"  Type          : {args.type}")
-            print(f"  ---------------------")
+            print("  ---------------------")
             print(f"  IMPLIED VOL   : {iv:.4f} ({iv:.2%})")
             print(f"{'=' * 50}\n")
         except ValueError as e:
@@ -1296,11 +1294,11 @@ Examples:
     elif args.command == "hvol":
         hvol = calculate_historical_volatility(args.ticker, args.days)
         print(f"\n{'=' * 50}")
-        print(f"  Historical Volatility")
+        print("  Historical Volatility")
         print(f"{'=' * 50}")
         print(f"  Ticker        : {args.ticker}")
         print(f"  Lookback      : {args.days} trading days")
-        print(f"  ---------------------")
+        print("  ---------------------")
         print(f"  HIST VOL      : {hvol:.4f} ({hvol:.2%})")
         print(f"{'=' * 50}\n")
 
@@ -1319,7 +1317,7 @@ Examples:
         print(report)
 
 
-def _build_strategy_from_args(args) -> Optional[List[OptionLeg]]:
+def _build_strategy_from_args(args) -> Optional[list[OptionLeg]]:
     """Build strategy legs from CLI arguments."""
     lot_size = args.lot_size
     lots = args.lots

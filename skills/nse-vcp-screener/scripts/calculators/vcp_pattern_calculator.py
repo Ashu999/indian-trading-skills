@@ -3,6 +3,8 @@ VCP (Volatility Contraction Pattern) detection calculator.
 Identifies tightening price contractions in a stock's recent price history.
 """
 
+from typing import cast
+
 import pandas as pd
 
 
@@ -20,8 +22,6 @@ def find_contractions(
         lookback_days = len(df)
 
     recent = df.tail(lookback_days).copy()
-    highs = recent["High"].values
-    lows = recent["Low"].values
 
     contractions = []
     window_sizes = _get_adaptive_windows(lookback_days)
@@ -31,8 +31,8 @@ def find_contractions(
             continue
 
         segment = recent.tail(window)
-        seg_high = float(segment["High"].max())
-        seg_low = float(segment["Low"].min())
+        seg_high = float(cast(float, segment["High"].max()))
+        seg_low = float(cast(float, segment["Low"].min()))
 
         if seg_low <= 0:
             continue

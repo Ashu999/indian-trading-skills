@@ -27,26 +27,24 @@ import argparse
 import json
 import re
 import sys
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from typing import Optional
-from dataclasses import dataclass, field, asdict
+from typing import Any, Optional
 
 try:
-    import feedparser
+    import feedparser as _feedparser
+    feedparser: Optional[Any] = _feedparser
     HAS_FEEDPARSER = True
 except ImportError:
+    feedparser = None
     HAS_FEEDPARSER = False
 
 try:
-    import requests
-    HAS_REQUESTS = True
-except ImportError:
-    HAS_REQUESTS = False
-
-try:
-    import yfinance as yf
+    import yfinance as _yf
+    yf: Optional[Any] = _yf
     HAS_YFINANCE = True
 except ImportError:
+    yf = None
     HAS_YFINANCE = False
 
 
@@ -246,7 +244,7 @@ def classify_event(title: str, summary: str = "") -> str:
         if score > 0:
             scores[event_type] = score
     if scores:
-        return max(scores, key=scores.get)
+        return max(scores, key=lambda event_type: scores[event_type])
     return "General"
 
 
@@ -330,6 +328,7 @@ def fetch_rss_feeds(
     if not HAS_FEEDPARSER:
         print("ERROR: feedparser not installed. Run: pip install feedparser")
         sys.exit(1)
+    assert feedparser is not None
 
     cutoff = datetime.now() - timedelta(days=days_back)
     all_items = []
@@ -344,6 +343,14 @@ def fetch_rss_feeds(
                     published = entry.published
                 elif hasattr(entry, "updated"):
                     published = entry.updated
+
+                parsed_time = getattr(entry, "published_parsed", None) or getattr(
+                    entry, "updated_parsed", None
+                )
+                if parsed_time:
+                    published_dt = datetime(*parsed_time[:6])
+                    if published_dt < cutoff:
+                        continue
 
                 title = entry.get("title", "").strip()
                 summary = entry.get("summary", "").strip()
@@ -413,6 +420,7 @@ def get_stock_price(symbol: str) -> Optional[dict]:
     """Fetch current stock price using yfinance."""
     if not HAS_YFINANCE:
         return None
+    assert yf is not None
     try:
         ticker = yf.Ticker(f"{symbol}.NS")
         info = ticker.fast_info
@@ -449,7 +457,7 @@ def format_markdown(items: list[NewsItem], stock_filter: Optional[str] = None,
     elif sector_filter:
         lines.append(f"# 📰 Sector News — {sector_filter.title()}")
     else:
-        lines.append(f"# 📊 Daily Market News Briefing")
+        lines.append("# 📊 Daily Market News Briefing")
 
     lines.append(f"\n**Generated:** {now.strftime('%A, %d %B %Y %I:%M %p IST')}")
     lines.append(f"**Total Items:** {len(items)}")

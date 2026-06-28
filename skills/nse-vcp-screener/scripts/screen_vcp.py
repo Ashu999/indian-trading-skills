@@ -13,6 +13,7 @@ import argparse
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Any, cast
 
 import pandas as pd
 import yfinance as yf
@@ -20,13 +21,20 @@ import yfinance as yf
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
+from calculators.pivot_proximity_calculator import calculate_pivot_proximity
+from calculators.relative_strength_calculator import calculate_relative_strength
 from calculators.trend_template_calculator import calculate_trend_template
 from calculators.vcp_pattern_calculator import calculate_vcp
 from calculators.volume_pattern_calculator import calculate_volume_pattern
-from calculators.pivot_proximity_calculator import calculate_pivot_proximity
-from calculators.relative_strength_calculator import calculate_relative_strength
-from scorer import calculate_composite_score
 from report_generator import generate_reports
+from scorer import calculate_composite_score
+
+
+def _normalize_tickers(tickers: Any) -> list[str]:
+    """Normalize niftystocks return values to a list of ticker strings."""
+    if isinstance(tickers, str):
+        return [tickers]
+    return [str(ticker) for ticker in tickers]
 
 
 def get_universe(universe: str, custom_tickers: str | None = None) -> list[str]:
@@ -39,13 +47,13 @@ def get_universe(universe: str, custom_tickers: str | None = None) -> list[str]:
         from niftystocks import ns
 
         if universe == "nifty50":
-            return ns.get_nifty50_with_ns()
+            return _normalize_tickers(ns.get_nifty50_with_ns())
         elif universe == "nifty200":
-            return ns.get_nifty200_with_ns()
+            return _normalize_tickers(ns.get_nifty200_with_ns())
         elif universe == "nifty500":
-            return ns.get_nifty_total_market_with_ns()
+            return _normalize_tickers(ns.get_nifty500_with_ns())
         else:
-            return ns.get_nifty50_with_ns()
+            return _normalize_tickers(ns.get_nifty50_with_ns())
     except ImportError:
         # Fallback: Nifty 50 hardcoded core components
         print("Warning: niftystocks package not available. Using hardcoded Nifty 50 list.", file=sys.stderr)
@@ -67,7 +75,7 @@ def get_universe(universe: str, custom_tickers: str | None = None) -> list[str]:
 def fetch_benchmark(period: str = "1y") -> pd.DataFrame:
     """Fetch Nifty 50 index data as benchmark."""
     try:
-        df = yf.download("^NSEI", period=period, interval="1d", progress=False)
+        df = cast(pd.DataFrame, yf.download("^NSEI", period=period, interval="1d", progress=False))
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
         return df
@@ -83,7 +91,7 @@ def screen_stock(
 ) -> dict | None:
     """Screen a single stock for VCP pattern. Returns result dict or None."""
     try:
-        df = yf.download(ticker, period="1y", interval="1d", progress=False)
+        df = cast(pd.DataFrame, yf.download(ticker, period="1y", interval="1d", progress=False))
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
 
@@ -92,7 +100,9 @@ def screen_stock(
 
         # Check minimum liquidity (₹1 crore daily avg turnover)
         if "Volume" in df.columns and "Close" in df.columns:
-            avg_turnover = (df["Volume"].tail(20) * df["Close"].tail(20)).mean()
+            volume = cast(pd.Series, df["Volume"])
+            close = cast(pd.Series, df["Close"])
+            avg_turnover = float(cast(float, (volume.tail(20) * close.tail(20)).mean()))
             if avg_turnover < 1_00_00_000:  # ₹1 crore
                 return None
 
@@ -117,7 +127,8 @@ def screen_stock(
 
         # Phase 3: Scoring
         volume = calculate_volume_pattern(df)
-        current_price = float(df["Close"].iloc[-1])
+        close = cast(pd.Series, df["Close"])
+        current_price = float(close.iloc[-1])
         pivot = vcp["pivot"]
         pivot_prox = calculate_pivot_proximity(current_price, pivot)
         rs = calculate_relative_strength(df, benchmark_df)
@@ -215,7 +226,7 @@ def main():
     # Generate reports
     if results:
         paths = generate_reports(results, args.output_dir)
-        print(f"Reports saved:")
+        print("Reports saved:")
         print(f"  JSON: {paths['json_path']}")
         print(f"  Markdown: {paths['md_path']}")
     else:

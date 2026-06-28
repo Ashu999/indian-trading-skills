@@ -3,6 +3,8 @@ Volume dry-up pattern calculator for VCP screening.
 Measures whether volume is declining as the pattern tightens — a key VCP characteristic.
 """
 
+from typing import cast
+
 import pandas as pd
 
 
@@ -23,10 +25,10 @@ def calculate_volume_pattern(df: pd.DataFrame) -> dict:
             "details": {"error": "Insufficient data or no volume column"},
         }
 
-    vol = df["Volume"]
+    vol = cast(pd.Series, df["Volume"])
 
-    avg_50 = float(vol.tail(50).mean())
-    avg_10 = float(vol.tail(10).mean())
+    avg_50 = float(cast(float, vol.tail(50).mean()))
+    avg_10 = float(cast(float, vol.tail(10).mean()))
 
     if avg_50 <= 0:
         return {
